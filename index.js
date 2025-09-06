@@ -82,27 +82,32 @@ const PROVIDERS = {
   glm: {
     name: 'GLM',
     displayName: 'GLM (智谱清言)',
-    baseUrl: 'https://open.bigmodel.cn/api/anthropic'
+    baseUrl: 'https://open.bigmodel.cn/api/anthropic',
+    apiKeyEnvName: 'ANTHROPIC_API_KEY'
   },
   qwen: {
     name: 'QWEN',
     displayName: 'QWEN (通义千问)',
-    baseUrl: 'https://dashscope.aliyuncs.com/api/v1/anthropic'
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v2/apps/claude-code-proxy',
+    apiKeyEnvName: 'ANTHROPIC_AUTH_TOKEN'
   },
   kimi: {
     name: 'Kimi',
     displayName: 'Kimi (月之暗面)',
-    baseUrl: 'https://api.moonshot.cn/anthropic'
+    baseUrl: 'https://api.moonshot.cn/anthropic',
+    apiKeyEnvName: 'ANTHROPIC_API_KEY'
   },
   deepseek: {
     name: 'DeepSeek',
     displayName: 'DeepSeek',
-    baseUrl: 'https://api.deepseek.com/anthropic'
+    baseUrl: 'https://api.deepseek.com/anthropic',
+    apiKeyEnvName: 'ANTHROPIC_API_KEY'
   },
   custom: {
     name: 'Custom',
     displayName: '自定义中转站 (Custom Relay)',
-    baseUrl: null // Will be provided by user
+    baseUrl: null, // Will be provided by user
+    apiKeyEnvName: 'ANTHROPIC_API_KEY'
   }
 };
 
@@ -168,18 +173,65 @@ class ClaudeEnvSetup {
       value: key
     }));
 
-    const answers = await inquirer.prompt([
+    // 首先选择供应商
+    const { provider: selectedProvider } = await inquirer.prompt([
       {
         type: 'list',
         name: 'provider',
         message: '请选择模型供应商:',
         choices: providerChoices
-      },
-      {
+      }
+    ]);
+
+    // 检查该供应商是否已保存配置
+    const providers = config.get('providers') || {};
+    const savedConfig = providers[selectedProvider] || {};
+    const savedApiKey = savedConfig.apiKey;
+    const savedBaseUrl = savedConfig.baseUrl; // 用于自定义供应商
+    
+    let useExistingApiKey = false;
+    let useExistingBaseUrl = false;
+    
+    // 如果已保存API密钥，询问是否使用
+    if (savedApiKey) {
+      console.log();
+      console.log(chalk.green(`📁 发现 ${PROVIDERS[selectedProvider].displayName} 的已保存配置:`));
+      console.log(`   API Key: ${chalk.gray('***[已保存]***')}`);
+      if (selectedProvider === 'custom' && savedBaseUrl) {
+        console.log(`   Base URL: ${chalk.blue(savedBaseUrl)}`);
+      }
+      console.log();
+
+      const { useExisting } = await inquirer.prompt([{
+        type: 'confirm',
+        name: 'useExisting',
+        message: '是否使用已保存的API密钥？',
+        default: true
+      }]);
+
+      useExistingApiKey = useExisting;
+      
+      // 对于自定义供应商，如果使用已存在的API密钥，也询问是否使用已保存的Base URL
+      if (useExisting && selectedProvider === 'custom' && savedBaseUrl) {
+        const { useExistingUrl } = await inquirer.prompt([{
+          type: 'confirm',
+          name: 'useExistingUrl',
+          message: '是否使用已保存的Base URL？',
+          default: true
+        }]);
+        useExistingBaseUrl = useExistingUrl;
+      }
+    }
+
+    // 构建后续问题数组
+    const questions = [];
+
+    // 自定义Base URL问题（仅在需要时询问）
+    if (selectedProvider === 'custom' && !useExistingBaseUrl) {
+      questions.push({
         type: 'input',
         name: 'customBaseUrl',
         message: '请输入自定义 Base URL:',
-        when: (answers) => answers.provider === 'custom',
         validate: (input) => {
           if (!input || input.trim().length === 0) {
             return 'Base URL 不能为空';
@@ -191,35 +243,56 @@ class ClaudeEnvSetup {
             return '请输入有效的 URL (例如: https://api.example.com/v1)';
           }
         }
-      },
-      {
-        type: 'list',
-        name: 'mode',
-        message: '请选择设置类型:',
-        choices: [
-          { name: '临时设置 (仅当前会话)', value: 'temp' },
-          { name: '永久设置 (系统环境变量)', value: 'perm' }
-        ]
-      },
-      {
+      });
+    }
+
+    // 设置类型选择
+    questions.push({
+      type: 'list',
+      name: 'mode',
+      message: '请选择设置类型:',
+      choices: [
+        { name: '临时设置 (仅当前会话)', value: 'temp' },
+        { name: '永久设置 (系统环境变量)', value: 'perm' }
+      ]
+    });
+
+    // API密钥输入（仅在不使用已保存密钥时询问）
+    if (!useExistingApiKey) {
+      questions.push({
         type: 'password',
         name: 'apiKey',
         message: '请输入您的API密钥:',
         mask: '*',
         validate: (input) => input.length > 0 || 'API密钥不能为空'
-      }
-    ]);
+      });
+    }
 
-    const provider = PROVIDERS[answers.provider];
-    const baseUrl = answers.provider === 'custom' ? answers.customBaseUrl : provider.baseUrl;
-    const providerName = answers.provider === 'custom' ? `Custom (${baseUrl})` : provider.name;
+    // 询问后续问题
+    const answers = await inquirer.prompt(questions);
+
+    // 构建配置对象
+    const provider = PROVIDERS[selectedProvider];
+    let baseUrl, apiKey;
+
+    // 确定Base URL
+    if (selectedProvider === 'custom') {
+      baseUrl = useExistingBaseUrl ? savedBaseUrl : answers.customBaseUrl;
+    } else {
+      baseUrl = provider.baseUrl;
+    }
+
+    // 确定API密钥
+    apiKey = useExistingApiKey ? savedApiKey : answers.apiKey;
+
+    const providerName = selectedProvider === 'custom' ? `Custom (${baseUrl})` : provider.name;
     
     return {
-      provider: answers.provider,
+      provider: selectedProvider,
       providerName: providerName,
       baseUrl: baseUrl,
       mode: answers.mode,
-      apiKey: answers.apiKey
+      apiKey: apiKey
     };
   }
 
@@ -249,17 +322,30 @@ class ClaudeEnvSetup {
     console.log(chalk.blue('正在设置环境变量...'));
     console.log();
 
+    // Get API key environment variable name
+    const provider = PROVIDERS[settings.provider];
+    const apiKeyEnvName = provider.apiKeyEnvName || 'ANTHROPIC_API_KEY';
+
     if (settings.mode === 'perm') {
-      await this.setPermanentEnvVars(settings);
+      await this.setPermanentEnvVars(settings, apiKeyEnvName);
     }
 
     // Always set current process environment for immediate effect
     process.env.ANTHROPIC_BASE_URL = settings.baseUrl;
-    process.env.ANTHROPIC_API_KEY = settings.apiKey;
+    process.env[apiKeyEnvName] = settings.apiKey;
+    
+    // Clear conflicting environment variables
+    if (apiKeyEnvName === 'ANTHROPIC_AUTH_TOKEN') {
+      // When using ANTHROPIC_AUTH_TOKEN, clear ANTHROPIC_API_KEY
+      delete process.env.ANTHROPIC_API_KEY;
+    } else if (apiKeyEnvName === 'ANTHROPIC_API_KEY') {
+      // When using ANTHROPIC_API_KEY, clear ANTHROPIC_AUTH_TOKEN
+      delete process.env.ANTHROPIC_AUTH_TOKEN;
+    }
 
     console.log(chalk.green('✅ 环境变量设置完成'));
     console.log(`   ANTHROPIC_BASE_URL=${settings.baseUrl}`);
-    console.log(`   ANTHROPIC_API_KEY=${chalk.gray('***[已隐藏]***')}`);
+    console.log(`   ${apiKeyEnvName}=${chalk.gray('***[已隐藏]***')}`);
     
     if (settings.mode === 'perm') {
       console.log();
@@ -283,10 +369,10 @@ class ClaudeEnvSetup {
     console.log();
     console.log(chalk.cyan('🔍 当前会话验证:'));
     console.log(`   ANTHROPIC_BASE_URL: ${chalk.green(process.env.ANTHROPIC_BASE_URL)}`);
-    console.log(`   ANTHROPIC_API_KEY: ${chalk.green('***[已设置]***')}`);
+    console.log(`   ${apiKeyEnvName}: ${chalk.green('***[已设置]***')}`);
   }
 
-  async setPermanentEnvVars(settings) {
+  async setPermanentEnvVars(settings, apiKeyEnvName) {
     const { spawn } = require('child_process');
     
     return new Promise((resolve, reject) => {
@@ -298,13 +384,25 @@ class ClaudeEnvSetup {
         
         setx1.on('close', (code1) => {
           if (code1 === 0) {
-            const setx2 = spawn('setx', ['ANTHROPIC_API_KEY', settings.apiKey], {
+            const setx2 = spawn('setx', [apiKeyEnvName, settings.apiKey], {
               stdio: 'pipe'
             });
             
             setx2.on('close', (code2) => {
               if (code2 === 0) {
-                resolve();
+                // Clear conflicting environment variables
+                const conflictingVar = apiKeyEnvName === 'ANTHROPIC_AUTH_TOKEN' 
+                  ? 'ANTHROPIC_API_KEY' 
+                  : 'ANTHROPIC_AUTH_TOKEN';
+                
+                const setx3 = spawn('setx', [conflictingVar, ''], {
+                  stdio: 'pipe'
+                });
+                
+                setx3.on('close', () => {
+                  // Continue regardless of whether clearing the conflicting var succeeded
+                  resolve();
+                });
               } else {
                 console.log(chalk.red('❌ 永久设置失败，可能需要管理员权限'));
                 resolve(); // Continue anyway
@@ -317,13 +415,13 @@ class ClaudeEnvSetup {
         });
       } else {
         // Unix: add to shell profile
-        this.addToShellProfile(settings);
+        this.addToShellProfile(settings, apiKeyEnvName);
         resolve();
       }
     });
   }
 
-  addToShellProfile(settings) {
+  addToShellProfile(settings, apiKeyEnvName) {
     const homeDir = os.homedir();
     const shellProfiles = ['.bashrc', '.zshrc', '.bash_profile', '.profile'];
     
@@ -337,11 +435,18 @@ class ClaudeEnvSetup {
       }
     }
 
+    // Determine conflicting environment variable
+    const conflictingVar = apiKeyEnvName === 'ANTHROPIC_AUTH_TOKEN' 
+      ? 'ANTHROPIC_API_KEY' 
+      : 'ANTHROPIC_AUTH_TOKEN';
+
     const envLines = [
       '',
       `# Claude Code environment variables - ${new Date().toISOString()}`,
       `export ANTHROPIC_BASE_URL="${settings.baseUrl}"`,
-      `export ANTHROPIC_API_KEY="${settings.apiKey}"`,
+      `export ${apiKeyEnvName}="${settings.apiKey}"`,
+      `# Clear conflicting environment variable`,
+      `unset ${conflictingVar}`,
       ''
     ];
 
@@ -389,9 +494,13 @@ class ClaudeEnvSetup {
     }]);
 
     if (launchClaude) {
-      await this.launchClaudeCode();
+      await this.launchClaudeCode(settings);
       return;
     }
+    
+    // Get API key environment variable name
+    const provider = PROVIDERS[settings.provider];
+    const apiKeyEnvName = provider.apiKeyEnvName || 'ANTHROPIC_API_KEY';
     
     if (settings.mode === 'perm') {
       console.log(chalk.cyan('📋 验证环境变量设置:'));
@@ -400,28 +509,28 @@ class ClaudeEnvSetup {
       if (this.isWindows) {
         console.log(chalk.yellow('在当前CMD窗口中验证 (立即生效):'));
         console.log(chalk.gray('  node -e "console.log(process.env.ANTHROPIC_BASE_URL)"'));
-        console.log(chalk.gray('  node -e "console.log(process.env.ANTHROPIC_API_KEY)"'));
+        console.log(chalk.gray(`  node -e "console.log(process.env.${apiKeyEnvName})"`));
         console.log();
         console.log(chalk.yellow('在新CMD窗口中验证 (永久设置):'));
         console.log(chalk.gray('  echo %ANTHROPIC_BASE_URL%'));
-        console.log(chalk.gray('  echo %ANTHROPIC_API_KEY%'));
+        console.log(chalk.gray(`  echo %${apiKeyEnvName}%`));
       } else {
         console.log(chalk.yellow('在当前终端中验证 (立即生效):'));
         console.log(chalk.gray('  echo $ANTHROPIC_BASE_URL'));
-        console.log(chalk.gray('  echo $ANTHROPIC_API_KEY'));
+        console.log(chalk.gray(`  echo $${apiKeyEnvName}`));
         console.log();
         console.log(chalk.yellow('在新终端中验证 (永久设置):'));
         console.log(chalk.gray('  echo $ANTHROPIC_BASE_URL'));
-        console.log(chalk.gray('  echo $ANTHROPIC_API_KEY'));
+        console.log(chalk.gray(`  echo $${apiKeyEnvName}`));
       }
     } else {
       console.log(chalk.cyan('验证环境变量 (当前会话):'));
       if (this.isWindows) {
         console.log(chalk.gray('  node -e "console.log(process.env.ANTHROPIC_BASE_URL)"'));
-        console.log(chalk.gray('  node -e "console.log(process.env.ANTHROPIC_API_KEY)"'));
+        console.log(chalk.gray(`  node -e "console.log(process.env.${apiKeyEnvName})"`));
       } else {
         console.log(chalk.gray('  echo $ANTHROPIC_BASE_URL'));
-        console.log(chalk.gray('  echo $ANTHROPIC_API_KEY'));
+        console.log(chalk.gray(`  echo $${apiKeyEnvName}`));
       }
     }
     
@@ -429,7 +538,7 @@ class ClaudeEnvSetup {
     console.log(chalk.green('✨ Claude Code 现在可以正常使用了！'));
   }
 
-  async launchClaudeCode() {
+  async launchClaudeCode(settings) {
     const { spawn } = require('child_process');
     
     console.log();
@@ -449,9 +558,9 @@ class ClaudeEnvSetup {
         console.log();
         console.log(chalk.red('❌ 无法启动 Claude Code:'), error.message);
         console.log(chalk.yellow('💡 请确保 Claude Code 已正确安装'));
-        console.log(chalk.gray('   可尝试运行: npm install -g @anthropic-ai/claude-desktop'));
+        console.log(chalk.gray('   可尝试运行: npm install -g @anthropic-ai/claude-code'));
         console.log();
-        this.showManualInstructions();
+        this.showManualInstructions(settings);
       });
 
       claude.on('close', (code) => {
@@ -462,11 +571,14 @@ class ClaudeEnvSetup {
     } catch (error) {
       console.log();
       console.log(chalk.red('❌ 启动失败:'), error.message);
-      this.showManualInstructions();
+      this.showManualInstructions(settings);
     }
   }
 
-  showManualInstructions() {
+  showManualInstructions(settings) {
+    const provider = PROVIDERS[settings.provider];
+    const apiKeyEnvName = provider.apiKeyEnvName || 'ANTHROPIC_API_KEY';
+    
     console.log();
     console.log(chalk.cyan('📋 手动启动 Claude Code:'));
     console.log();
@@ -475,7 +587,7 @@ class ClaudeEnvSetup {
     console.log();
     console.log(chalk.gray('环境变量验证:'));
     console.log(chalk.gray('  node -e "console.log(process.env.ANTHROPIC_BASE_URL)"'));
-    console.log(chalk.gray('  node -e "console.log(process.env.ANTHROPIC_API_KEY ? \'已设置\' : \'未设置\')"'));
+    console.log(chalk.gray(`  node -e "console.log(process.env.${apiKeyEnvName} ? '已设置' : '未设置')"`));
   }
 
   async run() {

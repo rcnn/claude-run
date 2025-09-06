@@ -69,13 +69,13 @@ claude-run
 
 ## 📊 支持的供应商
 
-| 供应商 | Claude Code 专用端点 |
-|--------|-------------------|
-| GLM | `https://open.bigmodel.cn/api/anthropic` |
-| QWEN | `https://dashscope.aliyuncs.com/api/v1/anthropic` |
-| Kimi | `https://api.moonshot.cn/anthropic` |
-| DeepSeek | `https://api.deepseek.com/anthropic` |
-| **自定义中转站** | **用户自定义 URL** |
+| 供应商 | Claude Code 专用端点 | API Key 环境变量 |
+|--------|-------------------|------------------|
+| GLM | `https://open.bigmodel.cn/api/anthropic` | `ANTHROPIC_API_KEY` |
+| QWEN | `https://dashscope.aliyuncs.com/api/v1/anthropic` | `ANTHROPIC_AUTH_TOKEN` |
+| Kimi | `https://api.moonshot.cn/anthropic` | `ANTHROPIC_API_KEY` |
+| DeepSeek | `https://api.deepseek.com/anthropic` | `ANTHROPIC_API_KEY` |
+| **自定义中转站** | **用户自定义 URL** | `ANTHROPIC_API_KEY` |
 
 ## 🔧 技术特性
 
