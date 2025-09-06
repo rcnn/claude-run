@@ -149,7 +149,7 @@ claude-run
 如果永久设置失败，请以管理员身份运行命令提示符：
 ```cmd
 # 以管理员身份打开 cmd 或 PowerShell
-claude-env
+claude-run
 ```
 
 ### Unix 系统配置文件问题
@@ -182,19 +182,19 @@ node --version
 
 ### 首次使用
 ```bash
-claude-env
+claude-run
 # 选择供应商 → 选择模式 → 输入密钥 → 确认设置
 ```
 
 ### 快速切换
 ```bash
-claude-env
+claude-run
 # 检测到保存配置 → 选择 "否" 重新配置 → 选择新供应商
 ```
 
 ### 团队协作
 ```bash
 # 在不同机器上使用相同配置
-claude-env
+claude-run
 # 输入团队提供的 API 密钥即可
 ```
