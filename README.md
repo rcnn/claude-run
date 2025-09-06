@@ -1,4 +1,4 @@
-# Claude Code 环境变量设置工具 (Node.js版)
+# Claude Code 智能切换工具
 
 一个现代化的跨平台工具，用于配置 Claude Code 的环境变量。支持多个模型供应商，具有智能配置记忆功能。
 
@@ -7,7 +7,7 @@
 ✅ **跨平台**: Windows、macOS、Linux 完美支持  
 ✅ **现代交互界面**: 基于 inquirer 的友好命令行界面  
 ✅ **智能配置记忆**: 自动保存和复用配置  
-✅ **多供应商支持**: GLM、QWEN、Kimi、DeepSeek  
+✅ **多供应商支持**: GLM、QWEN、Kimi、DeepSeek 、中转站
 ✅ **Claude Code 专用**: 使用 Anthropic 兼容端点  
 ✅ **安全存储**: 本地加密存储 API 密钥  
 
@@ -15,7 +15,7 @@
 
 ### 方式一：全局安装 (推荐)
 ```bash
-git clone 本仓库
+git clone https://github.com/rcnn/claude-run.git
 npm install -g .
 ```
 
