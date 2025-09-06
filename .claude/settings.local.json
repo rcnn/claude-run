@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:nanobanana.io)",
+      "Bash(playwright --version)",
+      "Bash(node:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npx:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_close",
+      "Bash(chmod:*)",
+      "Bash(echo:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(source:*)",
+      "Bash(show_header)",
+      "Bash(bash:*)",
+      "Bash(powershell:*)",
+      "Bash(timeout:*)",
+      "Bash(npm config:*)",
+      "Bash(where npm)",
+      "Read(//d/nvm/v22.14.0/**)",
+      "Bash(npm uninstall:*)",
+      "Bash(claude-run)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
