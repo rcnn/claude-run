@@ -112,8 +112,9 @@ const PROVIDERS = {
 };
 
 class ClaudeEnvSetup {
-  constructor() {
+  constructor(args = []) {
     this.isWindows = os.platform() === 'win32';
+    this.claudeArgs = args;
   }
 
   async showHeader() {
@@ -544,11 +545,14 @@ class ClaudeEnvSetup {
     console.log();
     console.log(chalk.cyan('🚀 正在启动 Claude Code...'));
     console.log(chalk.gray('环境变量已自动配置，Claude Code 将使用当前设置'));
+    // if (this.claudeArgs.length > 0) {
+    //   console.log(chalk.gray(`传递参数: ${this.claudeArgs.join(' ')}`));
+    // }
     console.log();
     
     try {
-      // Launch claude command with current environment variables
-      const claude = spawn('claude', [], {
+      // Launch claude command with current environment variables and passed arguments
+      const claude = spawn('claude', this.claudeArgs, {
         stdio: 'inherit',
         env: process.env,
         shell: true
@@ -627,7 +631,9 @@ class ClaudeEnvSetup {
 
 // Run the application
 if (require.main === module) {
-  const app = new ClaudeEnvSetup();
+  // Parse command line arguments - everything after 'claude-run' should be passed to claude
+  const claudeArgs = process.argv.slice(2);
+  const app = new ClaudeEnvSetup(claudeArgs);
   app.run().catch(console.error);
 }
 
