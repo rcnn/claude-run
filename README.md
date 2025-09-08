@@ -7,8 +7,9 @@
 ✅ **跨平台**: Windows、macOS、Linux 完美支持  
 ✅ **现代交互界面**: 基于 inquirer 的友好命令行界面  
 ✅ **智能配置记忆**: 自动保存和复用配置  
-✅ **多供应商支持**: GLM、QWEN、Kimi、DeepSeek 、中转站
+✅ **多供应商支持**: GLM、QWEN、Kimi、DeepSeek 、中转站  
 ✅ **Claude Code 专用**: 使用 Anthropic 兼容端点  
+✅ **参数传递支持**: 支持将命令行参数直接传递给 Claude Code  
 ✅ **安全存储**: 本地存储
 
 ## 📦 安装
@@ -37,10 +38,31 @@ npm test
 
 ## 🎯 使用方法
 
+### 基本使用
 只需运行一个命令：
 ```bash
 claude-run
 ```
+
+### 带参数启动 Claude Code
+如果需要直接传递参数给 Claude Code，可以在 `claude-run` 后添加任意参数：
+```bash
+# 传递单个参数
+claude-run --version
+
+# 传递多个参数
+claude-run --help --verbose
+
+# 传递文件路径参数
+claude-run my-project.js --watch
+
+# 传递任意 Claude Code 支持的参数
+claude-run --model claude-3-opus --temperature 0.5
+```
+
+所有 `claude-run` 后的参数都会原样传递给 Claude Code。
+
+### 交互式配置流程
 
 然后跟随交互界面：
 
@@ -185,6 +207,21 @@ claude-run
 ```bash
 claude-run
 # 检测到保存配置 → 选择 "否" 重新配置 → 选择新供应商
+```
+
+### 带参数直接启动 Claude Code
+```bash
+# 配置完成后直接启动 Claude Code 并传递参数
+claude-run --version
+# 等同于先运行 claude-run 完成配置，再运行 claude --version
+
+# 处理特定项目文件
+claude-run src/main.js --interactive
+# 等同于 claude src/main.js --interactive
+
+# 带多个参数启动
+claude-run --model claude-3-opus --temperature 0.7 my-project/
+# 等同于 claude --model claude-3-opus --temperature 0.7 my-project/
 ```
 
 ### 团队协作
