@@ -2,6 +2,9 @@
 
 一个命令完成所有的Claude Code平替，用于配置 Claude Code 的环境变量。支持多个模型供应商，具有智能配置记忆功能。
 
+## 💡Star 
+- 项目100%开源，可任意使用。如果觉得项目不错，记得给个Star支持,谢谢！
+
 ## 🚀 特性
 
 ✅ **跨平台**: Windows、macOS、Linux 完美支持  
@@ -230,5 +233,4 @@ claude-run --model claude-3-opus --temperature 0.7 my-project/
 claude-run
 # 输入团队提供的 API 密钥即可
 ```
-## 💡Star 
-- 项目100%开源，可任意使用。如果觉得项目不错，记得给个Star支持,谢谢！
+
